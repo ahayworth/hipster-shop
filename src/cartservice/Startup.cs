@@ -25,11 +25,8 @@ namespace cartservice
         {
             Configuration = configuration;
         }
-        const string LIGHTSTEP_ACCESS_TOKEN = "LS_ACCESS_TOKEN";
-        const string LIGHTSTEP_HOST = "LIGHTSTEP_HOST";
-        const string LIGHTSTEP_PORT = "LIGHTSTEP_PORT";
         public IConfiguration Configuration { get; }
-        
+
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
@@ -37,10 +34,7 @@ namespace cartservice
 
             AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
-            string lsHost = Environment.GetEnvironmentVariable(LIGHTSTEP_HOST);
-            int lsPort = Int32.Parse(Environment.GetEnvironmentVariable(LIGHTSTEP_PORT));
             string serviceName = Environment.GetEnvironmentVariable("LS_SERVICE_NAME");
-            string accessToken = Environment.GetEnvironmentVariable(LIGHTSTEP_ACCESS_TOKEN);
             // create and register an activity source
             var activitySource = new ActivitySource(serviceName);
             services.AddSingleton(activitySource);
@@ -73,11 +67,7 @@ namespace cartservice
                 .AddRedisInstrumentation(cartStore.Connection)
                 .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
                 .AddOtlpExporter(opt => {
-                    opt.Endpoint = $"{lsHost}:{lsPort}";
-                    opt.Headers = new Metadata
-                    {
-                        { "lightstep-access-token", accessToken }
-                    };
+                    opt.Endpoint = "otel-collector:55680";
                     opt.Credentials = new SslCredentials();
             }));
 
