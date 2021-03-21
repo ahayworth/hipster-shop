@@ -40,9 +40,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	//"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -55,10 +56,10 @@ var (
 	port = "3550"
 
 	reloadCatalog       bool
-	meter               = otel.Meter("productcatalogservice/metrics")
+	meter               = global.Meter("productcatalogservice/metrics")
 	gpLock              = new(sync.RWMutex)
 	gpValue             = new(float64)
-	gpLabels            = new([]label.KeyValue)
+	gpLabels            = new([]attribute.KeyValue)
 	getProductsObserver = metric.Must(meter).NewFloat64ValueObserver("catalog.getProducts.time", func(ctx context.Context, result metric.Float64ObserverResult) {
 		(*gpLock).RLock()
 		value := *gpValue
@@ -148,6 +149,10 @@ func run(port string) string {
 func initLightstepTracing(log logrus.FieldLogger) launcher.Launcher {
 	launcher := launcher.ConfigureOpentelemetry(
 		launcher.WithLogLevel("debug"),
+		launcher.WithSpanExporterEndpoint(os.Getenv("OTEL_EXPORTER_OTLP_SPAN_ENDPOINT")),
+		launcher.WithSpanExporterInsecure(true),
+		launcher.WithMetricExporterEndpoint(os.Getenv("OTEL_EXPORTER_OTLP_METRIC_ENDPOINT")),
+		launcher.WithMetricExporterInsecure(true),
 		launcher.WithLogger(log),
 	)
 	log.Info("Initialized Lightstep OpenTelemetry launcher")
@@ -196,7 +201,7 @@ func (p *productCatalog) ListProducts(context.Context, *pb.Empty) (*pb.ListProdu
 }
 
 func (p *productCatalog) GetProduct(ctx context.Context, req *pb.GetProductRequest) (*pb.Product, error) {
-	trace.SpanFromContext(ctx).SetAttributes(label.String("productId", req.Id))
+	trace.SpanFromContext(ctx).SetAttributes(attribute.String("productId", req.Id))
 	ts := time.Now()
 	time.Sleep(extraLatency)
 	var found *pb.Product
@@ -206,13 +211,13 @@ func (p *productCatalog) GetProduct(ctx context.Context, req *pb.GetProductReque
 		}
 	}
 	if found == nil {
-		trace.SpanFromContext(ctx).SetAttributes(label.Bool("error", true))
+		trace.SpanFromContext(ctx).SetAttributes(attribute.Bool("error", true))
 		return nil, status.Errorf(codes.NotFound, "no product with ID %s", req.Id)
 	}
 	elapsed := time.Since(ts)
 	(*gpLock).Lock()
 	*gpValue = elapsed.Seconds()
-	*gpLabels = []label.KeyValue{label.String("productId", found.Id)}
+	*gpLabels = []attribute.KeyValue{attribute.String("productId", found.Id)}
 	(*gpLock).Unlock()
 	return found, nil
 }

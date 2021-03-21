@@ -27,9 +27,10 @@ import (
 	"github.com/lightstep/otel-launcher-go/launcher"
 	"github.com/sirupsen/logrus"
 	grpcotel "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	//"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -43,7 +44,7 @@ const (
 
 var (
 	log        *logrus.Logger
-	meter      = otel.Meter("checkoutservice/metrics")
+	meter      = global.Meter("checkoutservice/metrics")
 	orderCount = metric.Must(meter).NewInt64Counter("checkoutservice.order")
 )
 
@@ -109,8 +110,10 @@ func initLightstepTracing(log logrus.FieldLogger) launcher.Launcher {
 	launcher := launcher.ConfigureOpentelemetry(
 		launcher.WithServiceVersion("5.3.1"),
 		launcher.WithLogLevel("debug"),
-		launcher.WithSpanExporterEndpoint(fmt.Sprintf("%s:%s",
-			os.Getenv("LIGHTSTEP_HOST"), os.Getenv("LIGHTSTEP_PORT"))),
+		launcher.WithSpanExporterEndpoint(os.Getenv("OTEL_EXPORTER_OTLP_SPAN_ENDPOINT")),
+		launcher.WithSpanExporterInsecure(true),
+		launcher.WithMetricExporterEndpoint(os.Getenv("OTEL_EXPORTER_OTLP_METRIC_ENDPOINT")),
+		launcher.WithMetricExporterInsecure(true),
 		launcher.WithLogger(log),
 	)
 	log.Info("Initialized Lightstep OpenTelemetry launcher")
@@ -142,13 +145,13 @@ func (cs *checkoutService) PlaceOrder(ctx context.Context, req *pb.PlaceOrderReq
 
 	orderID, err := uuid.NewUUID()
 	if err != nil {
-		orderCount.Add(ctx, 1, label.String("status", "internalError"))
+		orderCount.Add(ctx, 1, attribute.String("status", "internalError"))
 		return nil, status.Errorf(codes.Internal, "failed to generate order uuid")
 	}
 
 	prep, err := cs.prepareOrderItemsAndShippingQuoteFromCart(ctx, req.UserId, req.UserCurrency, req.Address)
 	if err != nil {
-		orderCount.Add(ctx, 1, label.String("status", "internalError"))
+		orderCount.Add(ctx, 1, attribute.String("status", "internalError"))
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
@@ -162,14 +165,14 @@ func (cs *checkoutService) PlaceOrder(ctx context.Context, req *pb.PlaceOrderReq
 
 	txID, err := cs.chargeCard(ctx, &total, req.CreditCard)
 	if err != nil {
-		orderCount.Add(ctx, 1, label.String("status", "chargeError"))
+		orderCount.Add(ctx, 1, attribute.String("status", "chargeError"))
 		return nil, status.Errorf(codes.Internal, "failed to charge card: %+v", err)
 	}
 	log.Infof("payment went through (transaction_id: %s)", txID)
 
 	shippingTrackingID, err := cs.shipOrder(ctx, req.Address, prep.cartItems)
 	if err != nil {
-		orderCount.Add(ctx, 1, label.String("status", "shippingError"))
+		orderCount.Add(ctx, 1, attribute.String("status", "shippingError"))
 		return nil, status.Errorf(codes.Unavailable, "shipping error: %+v", err)
 	}
 
@@ -189,7 +192,7 @@ func (cs *checkoutService) PlaceOrder(ctx context.Context, req *pb.PlaceOrderReq
 		log.Infof("order confirmation email sent to %q", req.Email)
 	}
 	resp := &pb.PlaceOrderResponse{Order: orderResult}
-	orderCount.Add(ctx, 1, label.String("status", "ok"))
+	orderCount.Add(ctx, 1, attribute.String("status", "ok"))
 	return resp, nil
 }
 

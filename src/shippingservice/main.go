@@ -139,6 +139,10 @@ func initLightstepTracing(log logrus.FieldLogger) launcher.Launcher {
 	launcher := launcher.ConfigureOpentelemetry(
 		launcher.WithLogLevel("debug"),
 		launcher.WithLogger(log),
+		launcher.WithSpanExporterEndpoint(os.Getenv("OTEL_EXPORTER_OTLP_SPAN_ENDPOINT")),
+		launcher.WithSpanExporterInsecure(true),
+		launcher.WithMetricExporterEndpoint(os.Getenv("OTEL_EXPORTER_OTLP_METRIC_ENDPOINT")),
+		launcher.WithMetricExporterInsecure(true),
 	)
 	log.Info("Initialized Lightstep OpenTelemetry launcher")
 	return launcher

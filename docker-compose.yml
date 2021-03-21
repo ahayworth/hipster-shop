@@ -1,0 +1,276 @@
+version: '2.4'
+x-grpc-health:
+  &grpc-health
+    test: "/bin/grpc_health_probe -addr=:$$PORT"
+
+services:
+  dozzle:
+    image: amir20/dozzle
+    ports:
+      - 8081:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib
+    ports:
+      - 55680:55680 # OTLP
+      - 55681:55681 # OTLP
+      - 6831:6831/udp # Jaeger
+      - 13133 # health_check extension
+    volumes:
+      - ./configs/otel-collector.yaml:/config.yaml
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --config /config.yaml
+    environment:
+      REDIS_ADDR: "redis:6379"
+    healthcheck:
+      test: "curl --fail 'http://localhost:13133'"
+    depends_on:
+      - tempo
+      - loki
+
+  tempo:
+    image: grafana/tempo:latest
+    ports:
+      - "3100"
+      - "55680"
+    volumes:
+      - ./configs/tempo.yaml:/config.yaml
+      - tempo-storage:/var/tempo
+    command: -config.file=/config.yaml
+
+  tempo-query:
+    image: grafana/tempo-query:latest
+    depends_on:
+      - tempo
+    ports:
+      - 16686:16686
+    volumes:
+      - ./configs/tempo-query.yaml:/config.yaml
+    command: --grpc-storage-plugin.configuration-file=/config.yaml
+
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100"
+    volumes:
+      - ./configs/loki.yaml:/config.yaml
+      - loki-storage:/loki
+    command: -config.file=/config.yaml
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      # TODO: document security implications in the README
+      # (not a big deal I just like to be clear when stuff like this is default)
+      - "0.0.0.0:3000:3000"
+    volumes:
+      - ./configs/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+      - grafana-storage:/var/lib/grafana
+    environment:
+      # TODO: document security implications in README
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    depends_on:
+      - tempo
+      - tempo-query
+      - loki
+
+## hipster-shop services
+  adservice:
+    build:
+      context: src/adservice
+    ports:
+      - 9555
+    healthcheck: *grpc-health
+    environment:
+      PORT: 9555
+      LS_SERVICE_NAME: adservice
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://otel-collector:55680"
+      OTEL_LOG_LEVEL: error
+      # Necessary for otel-launcher-java, even though we're not using lightstep
+      LS_ACCESS_TOKEN: "00000000000000000000000000000000"
+    depends_on:
+      - otel-collector
+
+  cartservice:
+    build:
+      context: src/cartservice
+    ports:
+      - 7070:7070
+    depends_on:
+      - redis
+    # healthcheck: *grpc-health
+    environment:
+      PORT: 7070
+      LISTEN_ADDR: 0.0.0.0
+      LS_SERVICE_NAME: cartservice
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://otel-collector:55680"
+      REDIS_ADDR: "redis://redis:6379"
+    depends_on:
+      - otel-collector
+      - redis
+
+  checkoutservice:
+    build:
+      context: src/checkoutservice
+    ports:
+      - 5050
+    environment:
+      PORT: 5050
+      PRODUCT_CATALOG_SERVICE_ADDR: "productcatalogservice:3550"
+      SHIPPING_SERVICE_ADDR: "shippingservice:50051"
+      PAYMENT_SERVICE_ADDR: "paymentservice:50052"
+      EMAIL_SERVICE_ADDR: "emailservice:5000"
+      CURRENCY_SERVICE_ADDR: "currencyservice:7000"
+      CART_SERVICE_ADDR: "cartservice:7070"
+      LS_SERVICE_NAME: checkoutservice
+      OTEL_EXPORTER_OTLP_SPAN_ENDPOINT: "otel-collector:55680"
+      OTEL_EXPORTER_OTLP_SPAN_ENDPOINT_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_METRIC_ENDPOINT: "otel-collector:55680"
+      OTEL_EXPORTER_OTLP_METRIC_ENDPOINT_INSECURE: "true"
+      HIPSTER_SICK: "false"
+    healthcheck: *grpc-health
+    depends_on:
+      - otel-collector
+
+  currencyservice:
+    build:
+      context: src/currencyservice
+    ports:
+      - 7000
+    healthcheck: *grpc-health
+    environment:
+      PORT: 7000
+      LS_SERVICE_NAME: currencyservice
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://otel-collector:55681/v1/traces"
+    depends_on:
+      - otel-collector
+
+  emailservice:
+    build:
+      context: src/emailservice
+    ports:
+      - 5000:8080
+    healthcheck: *grpc-health
+    environment:
+      PORT: 8080
+      ENABLE_PROFILER: 0
+      LS_SERVICE_NAME: emailservice
+      LS_METRICS_ENABLED: "False"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://otel-collector:55680"
+      # Necessary for otel-launcher-python, even though we're not using lightstep
+      LS_ACCESS_TOKEN: "00000000000000000000000000000000"
+    depends_on:
+      - otel-collector
+
+  frontend:
+    build:
+      context: src/frontend
+    ports:
+      - "80:8080"
+    healthcheck:
+      test: "curl --fail --cookie='shop_session-id=x-readiness-probe' 'http://localhost:8080/_healthz'"
+    environment:
+      PORT: 8080
+      PRODUCT_CATALOG_SERVICE_ADDR: "productcatalogservice:3550"
+      CURRENCY_SERVICE_ADDR: "currencyservice:7000"
+      CART_SERVICE_ADDR: "cartservice:7070"
+      RECOMMENDATION_SERVICE_ADDR: "recommendationservice:8080"
+      SHIPPING_SERVICE_ADDR: "shippingservice:50051"
+      CHECKOUT_SERVICE_ADDR: "checkoutservice:5050"
+      AD_SERVICE_ADDR: "adservice:9555"
+      LS_SERVICE_NAME: frontend
+      OTEL_EXPORTER_OTLP_SPAN_ENDPOINT: "otel-collector:55680"
+      OTEL_EXPORTER_OTLP_SPAN_ENDPOINT_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_METRIC_ENDPOINT: "otel-collector:55680"
+      OTEL_EXPORTER_OTLP_METRIC_ENDPOINT_INSECURE: "true"
+    depends_on:
+      - otel-collector
+
+  loadgenerator:
+    build:
+      context: src/loadgenerator
+    environment:
+      FRONTEND_ADDR: "frontend:8080"
+      USERS: 10
+
+  paymentservice:
+    build:
+      context: src/paymentservice
+    ports:
+      - 50052
+    healthcheck: *grpc-health
+    environment:
+      PORT: 50052
+      LS_SERVICE_NAME: paymentservice
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://otel-collector:55681/v1/traces"
+    depends_on:
+      - otel-collector
+
+  productcatalogservice:
+    build:
+      context: src/productcatalogservice
+    ports:
+      - "3550"
+    healthcheck: *grpc-health
+    environment:
+      PORT: "3550"
+      LS_SERVICE_NAME: productcatalogservice
+      LS_SERVICE_VERSION: "1.0.0"
+      OTEL_EXPORTER_OTLP_SPAN_ENDPOINT: "otel-collector:55680"
+      OTEL_EXPORTER_OTLP_METRIC_ENDPOINT: "otel-collector:55680"
+    depends_on:
+      - otel-collector
+
+  recommendationservice:
+    build:
+      context: src/recommendationservice
+    ports:
+      - 8080
+    healthcheck: *grpc-health
+    environment:
+      PORT: 8080
+      PRODUCT_CATALOG_SERVICE_ADDR: "productcatalogservice:3550"
+      ENABLE_PROFILER: "0"
+      LS_SERVICE_NAME: "recommendationservice"
+      LS_METRICS_ENABLED: "False"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://otel-collector:55680"
+      # Necessary for otel-launcher-python, even though we're not using lightstep
+      LS_ACCESS_TOKEN: "00000000000000000000000000000000"
+    depends_on:
+      - otel-collector
+
+  shippingservice:
+    build:
+      context: src/shippingservice
+    ports:
+      - 50051
+    healthcheck: *grpc-health
+    environment:
+      PORT: 50051
+      LS_SERVICE_NAME: "shippingservice"
+      OTEL_EXPORTER_OTLP_SPAN_ENDPOINT: "otel-collector:55680"
+      OTEL_EXPORTER_OTLP_SPAN_ENDPOINT_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_METRIC_ENDPOINT: "otel-collector:55680"
+      OTEL_EXPORTER_OTLP_METRIC_ENDPOINT_INSECURE: "true"
+    depends_on:
+      - otel-collector
+
+  redis:
+    image: redis:alpine
+    ports:
+      - 6379
+    healthcheck:
+      test: "redis-cli ping"
+      retries: 30
+    volumes:
+      - redis-data:/data
+
+volumes:
+  redis-data: {}
+  grafana-storage: {}
+  tempo-storage: {}
+  loki-storage: {}

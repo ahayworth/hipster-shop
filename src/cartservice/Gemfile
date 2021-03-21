@@ -1,0 +1,5 @@
+source "https://rubygems.org"
+
+gem "grpc", "~> 1.36"
+gem "grpc-tools"
+gem "redis", "~> 4.2"
