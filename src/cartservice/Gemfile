@@ -1,5 +1,7 @@
-source "https://rubygems.org"
+source 'https://rubygems.org'
 
-gem "grpc", "~> 1.36"
-gem "grpc-tools"
-gem "redis", "~> 4.2"
+gem 'grpc'
+gem 'griffin'
+gem 'opentelemetry-sdk'
+gem 'opentelemetry-instrumentation-all'
+gem 'opentelemetry-exporter-otlp'

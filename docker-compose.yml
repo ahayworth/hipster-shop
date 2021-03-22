@@ -107,7 +107,7 @@ services:
       PORT: 7070
       LISTEN_ADDR: 0.0.0.0
       LS_SERVICE_NAME: cartservice
-      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://otel-collector:55680"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://otel-collector:55681/v1/traces"
       REDIS_ADDR: "redis://redis:6379"
     depends_on:
       - otel-collector

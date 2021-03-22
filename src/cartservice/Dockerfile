@@ -6,4 +6,4 @@ RUN bundle install
 
 COPY . .
 
-ENTRYPOINT ["/usr/local/bin/ruby", "/app/cartserver.rb"]
+ENTRYPOINT ["bundle", "exec", "gruf"]
