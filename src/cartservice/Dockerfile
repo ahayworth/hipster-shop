@@ -6,4 +6,4 @@ RUN bundle install
 
 COPY . .
 
-ENTRYPOINT ["bundle", "exec", "gruf"]
+ENTRYPOINT ["bundle", "exec", "ruby", "cartservice.rb"]

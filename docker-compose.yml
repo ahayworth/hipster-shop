@@ -108,7 +108,9 @@ services:
       LISTEN_ADDR: 0.0.0.0
       LS_SERVICE_NAME: cartservice
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://otel-collector:55681/v1/traces"
+      OTEL_PROPAGATORS: "tracecontext,baggage,b3multi"
       REDIS_ADDR: "redis://redis:6379"
+      GRPC_KIT_LOGLEVEL: "debug"
     depends_on:
       - otel-collector
       - redis

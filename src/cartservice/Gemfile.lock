@@ -1,0 +1,43 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    ds9 (1.4.1)
+      mini_portile2 (>= 2.2.0)
+    google-protobuf (3.15.6)
+    googleapis-common-protos-types (1.0.6)
+      google-protobuf (~> 3.14)
+    grpc_kit (0.4.0)
+      ds9 (>= 1.4.0)
+      google-protobuf (>= 3.7.0)
+      googleapis-common-protos-types (>= 1.0.2)
+    mini_portile2 (2.5.0)
+    opentelemetry-api (0.15.0)
+    opentelemetry-common (0.15.0)
+      opentelemetry-api (~> 0.15.0)
+    opentelemetry-exporter-otlp (0.15.0)
+      google-protobuf (~> 3.7)
+      opentelemetry-api (~> 0.15.0)
+      opentelemetry-common (~> 0.15.0)
+    opentelemetry-instrumentation-redis (0.15.0)
+      opentelemetry-api (~> 0.15.0)
+      opentelemetry-common (~> 0.15.0)
+    opentelemetry-propagator-b3 (0.15.0)
+      opentelemetry-api (~> 0.15.0)
+    opentelemetry-sdk (0.15.0)
+      opentelemetry-api (~> 0.15.0)
+      opentelemetry-common (~> 0.15.0)
+    redis (4.2.5)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  grpc_kit
+  opentelemetry-exporter-otlp
+  opentelemetry-instrumentation-redis
+  opentelemetry-propagator-b3
+  opentelemetry-sdk
+  redis
+
+BUNDLED WITH
+   2.1.4
