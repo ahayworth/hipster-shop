@@ -2,6 +2,11 @@ version: '2.4'
 x-grpc-health:
   &grpc-health
     test: "/bin/grpc_health_probe -addr=:$$PORT"
+x-fluentd-log:
+  &fluentd-log
+    driver: fluentd
+    options:
+      fluentd-address: localhost:24224
 
 services:
   dozzle:
@@ -14,11 +19,20 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib
     ports:
-      - 55680:55680 # OTLP
-      - 55681:55681 # OTLP
-      - 6831:6831/udp # Jaeger
-      - 13133 # health_check extension
-      - 24224:24224 # fluentforward
+      # OTLP port (modern)
+      - "4317:4317"
+      # OTLP port (legacy, the collector listens on both)
+      - "55680:55680"
+      # OTLP over HTTP (URL: http://otel-collector:55681/v1/traces)
+      - "55681:55681"
+      # Jaeger
+      - "6831:6831/udp"
+      # health_check extension (TODO: maybe don't publish?)
+      - "13133"
+      # fluentforward - the collector accepts logs in this format
+      # We use it to automatically push container logs into the
+      # collector for processing before going to loki.
+      - "24224:24224"
     volumes:
       - ./configs/otel-collector.yaml:/config.yaml
       - /var/run/docker.sock:/var/run/docker.sock
@@ -46,7 +60,8 @@ services:
     depends_on:
       - tempo
     ports:
-      - 16686:16686
+      # Jaeger UI, for those who want it
+      - "16686:16686"
     volumes:
       - ./configs/tempo-query.yaml:/config.yaml
     command: --grpc-storage-plugin.configuration-file=/config.yaml
@@ -65,15 +80,15 @@ services:
     ports:
       # TODO: document security implications in the README
       # (not a big deal I just like to be clear when stuff like this is default)
-      - "0.0.0.0:3000:3000"
+      - "3000:3000"
     volumes:
       - ./configs/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
       - grafana-storage:/var/lib/grafana
     environment:
       # TODO: document security implications in README
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
     depends_on:
       - tempo
       - tempo-query
@@ -84,17 +99,14 @@ services:
     build:
       context: src/adservice
     ports:
-      - 9555
-    logging:
-      driver: fluentd
-      options:
-        fluentd-address: localhost:24224
+      - "9555"
+    logging: *fluentd-log
     healthcheck: *grpc-health
     environment:
-      PORT: 9555
-      LS_SERVICE_NAME: adservice
+      PORT: "9555"
+      LS_SERVICE_NAME: "adservice"
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://otel-collector:55680"
-      OTEL_LOG_LEVEL: error
+      OTEL_LOG_LEVEL: "error"
       # Necessary for otel-launcher-java, even though we're not using lightstep
       LS_ACCESS_TOKEN: "00000000000000000000000000000000"
     depends_on:
@@ -104,45 +116,36 @@ services:
     build:
       context: src/cartservice
     ports:
-      - 7070:7070
+      - "7070"
     depends_on:
       - redis
       - otel-collector
-    logging:
-      driver: fluentd
-      options:
-        fluentd-address: localhost:24224
+    logging: *fluentd-log
     # healthcheck: *grpc-health
     environment:
-      PORT: 7070
-      LISTEN_ADDR: 0.0.0.0
-      LS_SERVICE_NAME: cartservice
+      PORT: "7070"
+      LISTEN_ADDR: "0.0.0.0"
+      LS_SERVICE_NAME: "cartservice"
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://otel-collector:55681/v1/traces"
       OTEL_PROPAGATORS: "tracecontext,baggage,b3multi"
       REDIS_ADDR: "redis://redis:6379"
       GRPC_KIT_LOGLEVEL: "debug"
-    depends_on:
-      - otel-collector
-      - redis
 
   checkoutservice:
     build:
       context: src/checkoutservice
     ports:
-      - 5050
-    logging:
-      driver: fluentd
-      options:
-        fluentd-address: localhost:24224
+      - "5050"
+    logging: *fluentd-log
     environment:
-      PORT: 5050
+      PORT: "5050"
       PRODUCT_CATALOG_SERVICE_ADDR: "productcatalogservice:3550"
       SHIPPING_SERVICE_ADDR: "shippingservice:50051"
       PAYMENT_SERVICE_ADDR: "paymentservice:50052"
       EMAIL_SERVICE_ADDR: "emailservice:8080"
       CURRENCY_SERVICE_ADDR: "currencyservice:7000"
       CART_SERVICE_ADDR: "cartservice:7070"
-      LS_SERVICE_NAME: checkoutservice
+      LS_SERVICE_NAME: "checkoutservice"
       OTEL_EXPORTER_OTLP_SPAN_ENDPOINT: "otel-collector:55680"
       OTEL_EXPORTER_OTLP_SPAN_ENDPOINT_INSECURE: "true"
       OTEL_EXPORTER_OTLP_METRIC_ENDPOINT: "otel-collector:55680"
@@ -156,15 +159,12 @@ services:
     build:
       context: src/currencyservice
     ports:
-      - 7000
-    logging:
-      driver: fluentd
-      options:
-        fluentd-address: localhost:24224
+      - "7000"
+    logging: *fluentd-log
     healthcheck: *grpc-health
     environment:
-      PORT: 7000
-      LS_SERVICE_NAME: currencyservice
+      PORT: "7000"
+      LS_SERVICE_NAME: "currencyservice"
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://otel-collector:55681/v1/traces"
     depends_on:
       - otel-collector
@@ -173,16 +173,13 @@ services:
     build:
       context: src/emailservice
     ports:
-      - 8080
-    logging:
-      driver: fluentd
-      options:
-        fluentd-address: localhost:24224
+      - "8080"
+    logging: *fluentd-log
     healthcheck: *grpc-health
     environment:
-      PORT: 8080
-      ENABLE_PROFILER: 1
-      LS_SERVICE_NAME: emailservice
+      PORT: "8080"
+      ENABLE_PROFILER: "1"
+      LS_SERVICE_NAME: "emailservice"
       LS_METRICS_ENABLED: "True"
       # Necessary for otel-launcher-python, even though we're not using lightstep
       LS_ACCESS_TOKEN: "00000000000000000000000000000000"
@@ -201,14 +198,11 @@ services:
       context: src/frontend
     ports:
       - "80:8080"
-    logging:
-      driver: fluentd
-      options:
-        fluentd-address: localhost:24224
+    logging: *fluentd-log
     healthcheck:
       test: "curl --fail --cookie='shop_session-id=x-readiness-probe' 'http://localhost:8080/_healthz'"
     environment:
-      PORT: 8080
+      PORT: "8080"
       PRODUCT_CATALOG_SERVICE_ADDR: "productcatalogservice:3550"
       CURRENCY_SERVICE_ADDR: "currencyservice:7000"
       CART_SERVICE_ADDR: "cartservice:7070"
@@ -216,7 +210,7 @@ services:
       SHIPPING_SERVICE_ADDR: "shippingservice:50051"
       CHECKOUT_SERVICE_ADDR: "checkoutservice:5050"
       AD_SERVICE_ADDR: "adservice:9555"
-      LS_SERVICE_NAME: frontend
+      LS_SERVICE_NAME: "frontend"
       OTEL_EXPORTER_OTLP_SPAN_ENDPOINT: "otel-collector:55680"
       OTEL_EXPORTER_OTLP_SPAN_ENDPOINT_INSECURE: "true"
       OTEL_EXPORTER_OTLP_METRIC_ENDPOINT: "otel-collector:55680"
@@ -227,23 +221,24 @@ services:
   loadgenerator:
     build:
       context: src/loadgenerator
+    logging: *fluentd-log
     environment:
       FRONTEND_ADDR: "frontend:8080"
-      USERS: 10
+      USERS: 2
+    depends_on:
+      - otel-collector
+      - frontend
 
   paymentservice:
     build:
       context: src/paymentservice
     ports:
-      - 50052
-    logging:
-      driver: fluentd
-      options:
-        fluentd-address: localhost:24224
+      - "50052"
+    logging: *fluentd-log
     healthcheck: *grpc-health
     environment:
-      PORT: 50052
-      LS_SERVICE_NAME: paymentservice
+      PORT: "50052"
+      LS_SERVICE_NAME: "paymentservice"
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://otel-collector:55681/v1/traces"
     depends_on:
       - otel-collector
@@ -253,14 +248,11 @@ services:
       context: src/productcatalogservice
     ports:
       - "3550"
-    logging:
-      driver: fluentd
-      options:
-        fluentd-address: localhost:24224
+    logging: *fluentd-log
     healthcheck: *grpc-health
     environment:
       PORT: "3550"
-      LS_SERVICE_NAME: productcatalogservice
+      LS_SERVICE_NAME: "productcatalogservice"
       LS_SERVICE_VERSION: "1.0.0"
       OTEL_EXPORTER_OTLP_SPAN_ENDPOINT: "otel-collector:55680"
       OTEL_EXPORTER_OTLP_METRIC_ENDPOINT: "otel-collector:55680"
@@ -271,14 +263,11 @@ services:
     build:
       context: src/recommendationservice
     ports:
-      - 8080
-    logging:
-      driver: fluentd
-      options:
-        fluentd-address: localhost:24224
+      - "8080"
+    logging: *fluentd-log
     healthcheck: *grpc-health
     environment:
-      PORT: 8080
+      PORT: "8080"
       PRODUCT_CATALOG_SERVICE_ADDR: "productcatalogservice:3550"
       ENABLE_PROFILER: "1"
       LS_SERVICE_NAME: "recommendationservice"
@@ -299,14 +288,11 @@ services:
     build:
       context: src/shippingservice
     ports:
-      - 50051
-    logging:
-      driver: fluentd
-      options:
-        fluentd-address: localhost:24224
+      - "50051"
+    logging: *fluentd-log
     healthcheck: *grpc-health
     environment:
-      PORT: 50051
+      PORT: "50051"
       LS_SERVICE_NAME: "shippingservice"
       OTEL_EXPORTER_OTLP_SPAN_ENDPOINT: "otel-collector:55680"
       OTEL_EXPORTER_OTLP_SPAN_ENDPOINT_INSECURE: "true"
@@ -318,7 +304,7 @@ services:
   redis:
     image: redis:alpine
     ports:
-      - 6379
+      - "6379"
     healthcheck:
       test: "redis-cli ping"
       retries: 30
