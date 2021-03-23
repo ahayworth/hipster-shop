@@ -28,5 +28,5 @@ datasources:
       httpMethod: GET
       tracesToLogs:
         datasourceUid: 'loki'
-        tags: ['job', 'instance']
+        tags: ['service_name']
     version: 1

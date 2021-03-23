@@ -26,6 +26,31 @@ receivers:
 # TODO: tag all events to make it clear it's localdev
 processors:
   batch:
+  # We add a derived `service_name` resource attribute to incoming spans in this processor.
+  # We do so because we also set the `service_name` Loki label on incoming logs elsewhere.
+  # This allows us to more easily correlate logs and traces.
+  #
+  # We need to use `service_name` instead of the OTel standard `service.name` because Loki doesn't allow for dots in its label names.
+  #
+  # NB: This is a *resource* processor; and not a *span* processor (and not an *attributes* processor).
+  # They all operate on different parts of the signal, and `service.name` is a resource attribute.
+  #
+  # TODO: correlate logs and traces by trace ID rather than by
+  #       service tags (if possible in Grafana)
+  resource/span_service_loki:
+    attributes:
+      - key: service_name
+        action: insert
+        from_attribute: 'service.name'
+  # Here we take the `container_name` added by docker in the fluentd
+  # logs, and then extract the service name from it. We set that as
+  # the `service_name` tag. That allows us to correlate the logs and
+  # spans rather nicely.
+  attributes/log_rename_container:
+    actions:
+      - key: container_name
+        action: extract
+        pattern: ^/hipster-shop_(?P<service_name>[a-zA-Z]+)
 
 exporters:
   logging:
@@ -40,8 +65,23 @@ exporters:
     endpoint: "http://loki:3100/loki/api/v1/push"
     labels:
       attributes:
-        container_name: 'container_name'
-        container_id: 'container_id'
+        # The attributes map serves two purposes:
+        # 1. The keys function as an allow-list - only logs which have
+        #    one of these label names will be forwarded on to Loki.
+        # 2. The key/value pair is a transformation - the label whose name
+        #    matches the key will have its name transformed as specified.
+        #
+        # So for example, we could say `service_name: 'unicorns'` - which would
+        # allow logs if they have the `service_name` label - and would rewrite
+        # that label name to `unicorns` before sending it to Loki (and the label
+        # value is untouched). So `service_name: rainbows` is permitted, but is
+        # found in Loki as `unicorns: rainbows`.
+        #
+        # For our purposes, we just want to permit logs which have the `service_name`
+        # label. We don't actually care to transform the label name here - it's a
+        # functional no-op. The convention in the collector is to set the value to
+        # the empty string if you don't actualy want a transformation.
+        service_name: ''
 
   # honeycomb
   # otlp/2:
@@ -63,9 +103,10 @@ service:
       receivers:
         - otlp
       processors:
+        - resource/span_service_loki
         - batch
       exporters:
-        # - logging
+        - logging
         - otlp
     metrics:
       receivers:
@@ -79,5 +120,7 @@ service:
       receivers:
         - otlp
         - fluentforward
+      processors:
+        - attributes/log_rename_container
       exporters:
         - loki
