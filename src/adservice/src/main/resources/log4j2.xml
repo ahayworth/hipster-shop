@@ -10,9 +10,8 @@
            (https://cloud.google.com/logging/docs/agent/configuration#special-fields). -->
 
       <JsonLayout compact="true" eventEol="true">
-        <KeyValuePair key="logging.googleapis.com/trace" value="$${ctx:traceId}"/>
-        <KeyValuePair key="logging.googleapis.com/spanId" value="$${ctx:spanId}"/>
-        <KeyValuePair key="logging.googleapis.com/traceSampled" value="$${ctx:traceSampled}"/>
+        <KeyValuePair key="trace_id" value="$${ctx:trace_id}"/>
+        <KeyValuePair key="span_id" value="$${ctx:span_id}"/>
         <KeyValuePair key="time" value="$${date:yyyy-MM-dd}T$${date:HH:mm:ss.SSS}Z"/>
      </JsonLayout>
 
