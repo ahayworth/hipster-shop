@@ -125,7 +125,7 @@ services:
       PRODUCT_CATALOG_SERVICE_ADDR: "productcatalogservice:3550"
       SHIPPING_SERVICE_ADDR: "shippingservice:50051"
       PAYMENT_SERVICE_ADDR: "paymentservice:50052"
-      EMAIL_SERVICE_ADDR: "emailservice:5000"
+      EMAIL_SERVICE_ADDR: "emailservice:8080"
       CURRENCY_SERVICE_ADDR: "currencyservice:7000"
       CART_SERVICE_ADDR: "cartservice:7070"
       LS_SERVICE_NAME: checkoutservice
@@ -155,16 +155,22 @@ services:
     build:
       context: src/emailservice
     ports:
-      - 5000:8080
+      - 8080
     healthcheck: *grpc-health
     environment:
       PORT: 8080
-      ENABLE_PROFILER: 0
+      ENABLE_PROFILER: 1
       LS_SERVICE_NAME: emailservice
-      LS_METRICS_ENABLED: "False"
-      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://otel-collector:55680"
+      LS_METRICS_ENABLED: "True"
       # Necessary for otel-launcher-python, even though we're not using lightstep
       LS_ACCESS_TOKEN: "00000000000000000000000000000000"
+      OTEL_EXPORTER_OTLP_SPAN_ENDPOINT: "otel-collector:4317"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "otel-collector:4317"
+      OTEL_EXPORTER_OTLP_METRIC_ENDPOINT: "otel-collector:4317"
+      OTEL_EXPORTER_OTLP_SPAN_INSECURE: "True"
+      OTEL_EXPORTER_OTLP_METRIC_INSECURE: "True"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "True"
+      OTEL_LOG_LEVEL: "debug"
     depends_on:
       - otel-collector
 
@@ -236,10 +242,16 @@ services:
     environment:
       PORT: 8080
       PRODUCT_CATALOG_SERVICE_ADDR: "productcatalogservice:3550"
-      ENABLE_PROFILER: "0"
+      ENABLE_PROFILER: "1"
       LS_SERVICE_NAME: "recommendationservice"
-      LS_METRICS_ENABLED: "False"
-      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://otel-collector:55680"
+      LS_METRICS_ENABLED: "True"
+      OTEL_EXPORTER_OTLP_SPAN_ENDPOINT: "otel-collector:4317"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "otel-collector:4317"
+      OTEL_EXPORTER_OTLP_METRIC_ENDPOINT: "otel-collector:4317"
+      OTEL_EXPORTER_OTLP_SPAN_INSECURE: "True"
+      OTEL_EXPORTER_OTLP_METRIC_INSECURE: "True"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "True"
+      OTEL_LOG_LEVEL: "debug"
       # Necessary for otel-launcher-python, even though we're not using lightstep
       LS_ACCESS_TOKEN: "00000000000000000000000000000000"
     depends_on:

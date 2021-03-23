@@ -89,14 +89,13 @@ class OpenTelemetryInterceptor < GRPC::ServerInterceptor
   end
 end
 
-sock = TCPServer.new(ENV['LISTEN_ADDR'], ENV['PORT'])
-server = GrpcKit::Server.new({
-  interceptors: [OpenTelemetryInterceptor.new]
-})
-server.handle(CartServer.new)
 STDOUT.sync = true
-
-loop do
-  conn = sock.accept
-  server.run(conn)
+Griffin::Server.configure do |c|
+  c.bind ENV['LISTEN_ADDR']
+  c.port ENV['PORT']
+  c.services CartServer.new
+  c.interceptors [OpenTelemetryInterceptor.new]
+  c.workers 4
 end
+
+Griffin::Server.run
