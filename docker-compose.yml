@@ -18,6 +18,7 @@ services:
       - 55681:55681 # OTLP
       - 6831:6831/udp # Jaeger
       - 13133 # health_check extension
+      - 24224:24224 # fluentforward
     volumes:
       - ./configs/otel-collector.yaml:/config.yaml
       - /var/run/docker.sock:/var/run/docker.sock
@@ -84,6 +85,10 @@ services:
       context: src/adservice
     ports:
       - 9555
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
     healthcheck: *grpc-health
     environment:
       PORT: 9555
@@ -102,6 +107,11 @@ services:
       - 7070:7070
     depends_on:
       - redis
+      - otel-collector
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
     # healthcheck: *grpc-health
     environment:
       PORT: 7070
@@ -120,6 +130,10 @@ services:
       context: src/checkoutservice
     ports:
       - 5050
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
     environment:
       PORT: 5050
       PRODUCT_CATALOG_SERVICE_ADDR: "productcatalogservice:3550"
@@ -143,6 +157,10 @@ services:
       context: src/currencyservice
     ports:
       - 7000
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
     healthcheck: *grpc-health
     environment:
       PORT: 7000
@@ -156,6 +174,10 @@ services:
       context: src/emailservice
     ports:
       - 8080
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
     healthcheck: *grpc-health
     environment:
       PORT: 8080
@@ -179,6 +201,10 @@ services:
       context: src/frontend
     ports:
       - "80:8080"
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
     healthcheck:
       test: "curl --fail --cookie='shop_session-id=x-readiness-probe' 'http://localhost:8080/_healthz'"
     environment:
@@ -210,6 +236,10 @@ services:
       context: src/paymentservice
     ports:
       - 50052
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
     healthcheck: *grpc-health
     environment:
       PORT: 50052
@@ -223,6 +253,10 @@ services:
       context: src/productcatalogservice
     ports:
       - "3550"
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
     healthcheck: *grpc-health
     environment:
       PORT: "3550"
@@ -238,6 +272,10 @@ services:
       context: src/recommendationservice
     ports:
       - 8080
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
     healthcheck: *grpc-health
     environment:
       PORT: 8080
@@ -262,6 +300,10 @@ services:
       context: src/shippingservice
     ports:
       - 50051
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
     healthcheck: *grpc-health
     environment:
       PORT: 50051

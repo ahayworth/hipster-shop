@@ -15,6 +15,8 @@ receivers:
     protocols:
       grpc:
       http:
+  fluentforward:
+    endpoint: 0.0.0.0:24224
   redis:
     endpoint: "${REDIS_ADDR}"
     service_name: "cartservice"
@@ -36,6 +38,10 @@ exporters:
     insecure: true
   loki:
     endpoint: "http://loki:3100/loki/api/v1/push"
+    labels:
+      attributes:
+        container_name: 'container_name'
+        container_id: 'container_id'
 
   # honeycomb
   # otlp/2:
@@ -69,3 +75,9 @@ service:
       exporters:
         - logging
         # - otlp
+    logs:
+      receivers:
+        - otlp
+        - fluentforward
+      exporters:
+        - loki
