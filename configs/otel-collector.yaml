@@ -61,6 +61,8 @@ exporters:
     # forwards to Tempo over gRPC which is configured locally to listen on 55680 (the default for Tempo)
     endpoint: "tempo:55680"
     insecure: true
+  prometheus:
+    endpoint: "0.0.0.0:9090"
   loki:
     endpoint: "http://loki:3100/loki/api/v1/push"
     labels:
@@ -115,7 +117,7 @@ service:
         - docker_stats
       exporters:
         - logging
-        # - otlp
+        - prometheus
     logs:
       receivers:
         - otlp

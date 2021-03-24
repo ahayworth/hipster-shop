@@ -33,6 +33,7 @@ services:
       # We use it to automatically push container logs into the
       # collector for processing before going to loki.
       - "24224:24224"
+      - "9090"
     volumes:
       - ./configs/otel-collector.yaml:/config.yaml
       - /var/run/docker.sock:/var/run/docker.sock
@@ -44,6 +45,7 @@ services:
     depends_on:
       - tempo
       - loki
+      - prometheus
 
   tempo:
     image: grafana/tempo:latest
@@ -75,6 +77,13 @@ services:
       - loki-storage:/loki
     command: -config.file=/config.yaml
 
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
+
   grafana:
     image: grafana/grafana:latest
     ports:
@@ -93,6 +102,7 @@ services:
       - tempo
       - tempo-query
       - loki
+      - prometheus
 
 ## hipster-shop services
   adservice:

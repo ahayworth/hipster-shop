@@ -30,3 +30,10 @@ datasources:
         datasourceUid: 'loki'
         tags: ['service_name']
     version: 1
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    httpMethod: POST
+    url: http://prometheus:9090
+    editable: false
+    isDefault: true
