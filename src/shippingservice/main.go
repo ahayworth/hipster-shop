@@ -29,9 +29,10 @@ import (
 	"google.golang.org/grpc/status"
 
 	pb "github.com/GoogleCloudPlatform/microservices-demo/src/shippingservice/genproto"
-	"github.com/lightstep/otel-launcher-go/launcher"
 	grpcotel "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -55,8 +56,13 @@ func init() {
 }
 
 func main() {
-	otel := initLightstepTracing(log)
-	defer otel.Shutdown()
+	cleanup, err := initTelemetry()
+	if err != nil {
+		log.Errorf("Unable to start telemetry: %s", err)
+	}
+	if cleanup != nil {
+		defer cleanup()
+	}
 
 	port := defaultPort
 	if value, ok := os.LookupEnv("PORT"); ok {
@@ -98,8 +104,16 @@ func (s *server) Watch(req *healthpb.HealthCheckRequest, ws healthpb.Health_Watc
 
 // GetQuote produces a shipping quote (cost) in USD.
 func (s *server) GetQuote(ctx context.Context, in *pb.GetQuoteRequest) (*pb.GetQuoteResponse, error) {
-	log.Info("[GetQuote] received request")
-	defer log.Info("[GetQuote] completed request")
+	span := trace.SpanFromContext(ctx)
+	spanFields := logrus.Fields{}
+	if span.IsRecording() {
+		spanFields = logrus.Fields{
+			"trace_id": span.SpanContext().TraceID().String(),
+			"span_id":  span.SpanContext().SpanID().String(),
+		}
+	}
+	log.WithFields(spanFields).Info("[GetQuote] received request")
+	defer log.WithFields(spanFields).Info("[GetQuote] completed request")
 
 	// 1. Our quote system requires the total number of items to be shipped.
 	count := 0
@@ -123,8 +137,16 @@ func (s *server) GetQuote(ctx context.Context, in *pb.GetQuoteRequest) (*pb.GetQ
 // ShipOrder mocks that the requested items will be shipped.
 // It supplies a tracking ID for notional lookup of shipment delivery status.
 func (s *server) ShipOrder(ctx context.Context, in *pb.ShipOrderRequest) (*pb.ShipOrderResponse, error) {
-	log.Info("[ShipOrder] received request")
-	defer log.Info("[ShipOrder] completed request")
+	span := trace.SpanFromContext(ctx)
+	spanFields := logrus.Fields{}
+	if span.IsRecording() {
+		spanFields = logrus.Fields{
+			"trace_id": span.SpanContext().TraceID().String(),
+			"span_id":  span.SpanContext().SpanID().String(),
+		}
+	}
+	log.WithFields(spanFields).Info("[ShipOrder] received request")
+	defer log.WithFields(spanFields).Info("[ShipOrder] completed request")
 	// 1. Create a Tracking ID
 	baseAddress := fmt.Sprintf("%s, %s, %s", in.Address.StreetAddress, in.Address.City, in.Address.State)
 	id := CreateTrackingId(baseAddress)
@@ -133,17 +155,4 @@ func (s *server) ShipOrder(ctx context.Context, in *pb.ShipOrderRequest) (*pb.Sh
 	return &pb.ShipOrderResponse{
 		TrackingId: id,
 	}, nil
-}
-
-func initLightstepTracing(log logrus.FieldLogger) launcher.Launcher {
-	launcher := launcher.ConfigureOpentelemetry(
-		launcher.WithLogLevel("debug"),
-		launcher.WithLogger(log),
-		launcher.WithSpanExporterEndpoint(os.Getenv("OTEL_EXPORTER_OTLP_SPAN_ENDPOINT")),
-		launcher.WithSpanExporterInsecure(true),
-		launcher.WithMetricExporterEndpoint(os.Getenv("OTEL_EXPORTER_OTLP_METRIC_ENDPOINT")),
-		launcher.WithMetricExporterInsecure(true),
-	)
-	log.Info("Initialized Lightstep OpenTelemetry launcher")
-	return launcher
 }

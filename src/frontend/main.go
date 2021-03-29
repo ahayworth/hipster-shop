@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/lightstep/otel-launcher-go/launcher"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
@@ -41,6 +40,7 @@ const (
 )
 
 var (
+	log                   *logrus.Logger
 	whitelistedCurrencies = map[string]bool{
 		"USD": true,
 		"EUR": true,
@@ -78,8 +78,15 @@ type frontendServer struct {
 func main() {
 	ctx := context.Background()
 	log := logrus.New()
-	otel := initLightstepTracing(log)
-	defer otel.Shutdown()
+
+	cleanup, err := initTelemetry()
+	if err != nil {
+		log.Errorf("Unable to start telemetry: %s", err)
+	}
+	if cleanup != nil {
+		defer cleanup()
+	}
+
 	log.Level = logrus.DebugLevel
 	log.Formatter = &logrus.JSONFormatter{
 		FieldMap: logrus.FieldMap{
@@ -133,19 +140,6 @@ func main() {
 
 	log.Infof("starting server on " + addr + ":" + srvPort)
 	log.Fatal(http.ListenAndServe(addr+":"+srvPort, handler))
-}
-
-func initLightstepTracing(log logrus.FieldLogger) launcher.Launcher {
-	launcher := launcher.ConfigureOpentelemetry(
-		launcher.WithLogLevel("debug"),
-		launcher.WithSpanExporterEndpoint(os.Getenv("OTEL_EXPORTER_OTLP_SPAN_ENDPOINT")),
-		launcher.WithSpanExporterInsecure(true),
-		launcher.WithMetricExporterEndpoint(os.Getenv("OTEL_EXPORTER_OTLP_METRIC_ENDPOINT")),
-		launcher.WithMetricExporterInsecure(true),
-		launcher.WithLogger(log),
-	)
-	log.Info("Initialized Lightstep OpenTelemetry launcher")
-	return launcher
 }
 
 func mustMapEnv(target *string, envKey string) {

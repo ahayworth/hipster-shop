@@ -1,27 +1,25 @@
-This is a fork of a [fork](https://github.com/lightstep/hipster-shop) of https://github.com/GoogleCloudPlatform/microservices-demo
-
 # Hipster Shop: OpenTelemetry Observability Demo Application
 
 - [Service Architecture](#service-architecture)
-- [Features](#features)
 - [Prerequisites](#prerequisites)
-  - [Local Installation Only](#local-installation-only)
-  - [All Installations](#all-installations)
-- [Local Installation](#local-installation)
+- [Installation](#installation)
 - [Cleanup](#cleanup)
 - [Conferences featuring Hipster Shop](#conferences-featuring-hipster-shop)
 
+**Hipster Shop** is a comprehensive OpenTelemetry technology demo and reference application. It features a functional e-commerce site built on a collection of microservices, all instrumented with OpenTelemetry. You can browse the site, add items to your cart, and even "purchase" them - demonstrating the complete vision of modern distributed telemetry.
 
-The application is a web-based e-commerce app called **Hipster Shop** where users can browse items,
-add them to the cart, and purchase them. Google originally used this application to demonstrate use of technologies like
-Kubernetes/GKE, Istio, Stackdriver, gRPC and OpenCensus.
+We demonstrate the following technologies:
 
-This fork uses it to demonstrate OpenTelemetry, Grafana, Loki, Tempo, and related technologies.
+- OpenTelemetry Tracing, Metrics, and Logging
+- The OpenTelemetry Collector
+- Grafana, Loki (logs storage), and Tempo (trace storage)
+- Prometheus
 
-This project contains a 10-tier microservices application, where services are built using different languages and different tracing libraries. It runs with a simple `docker-compose up`, making it easy to get started!
+Our goal is to provide a sample microservice in each official OpenTelemetry language, instrumented with the very latest that language's SDK has to offer. When a language's OpenTelemetry SDK does not provide one of the three telemetry pillars (Tracing, Metrics, and Logging), we provide a modern and useful alternative that can fill the gap until that language's SDK support improves.
+
+This application is based on the excellent work done by Google in their [microservices-demo](https://github.com/GoogleCloudPlatform/microservices-demo) and LightStep in their [hipster-shop](https://github.com/lightstep/hipster-shop) - we're grateful for their work, and hope to collaborate on demo applications in the future.
 
 If you’re using this demo, please **★Star** this repository to show your interest!
-
 
 | Home Page                                                                                                         | Checkout Page                                                                                                    |
 | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -51,58 +49,37 @@ Find **Protocol Buffers Descriptions** at the [`./pb` directory](./pb).
 | [adservice](./src/adservice)                         | Java          | Provides text ads based on given context words.                                                                                   |
 | [loadgenerator](./src/loadgenerator)                 | Python/Locust | Continuously sends requests imitating realistic user shopping flows to the frontend.                                              |
 
-## Features
-
-- **[OpenTelemetry](https://opentelemetry.lightstep.com/) Tracing:** Most services are instrumented using OpenTelemetry trace interceptors for gRPC/HTTP.
-- **[Grafana](TODO)**
-- **[Tempo](TODO)**
-- **[Loki](TODO)**
-- **Synthetic Load Generation:** The application demo comes with a background
-  job that creates realistic usage patterns on the website using
-  [Locust](https://locust.io/) load generator.
-
 ## Prerequisites
 
-### Local Installation Only
-Install one of the following two options to run a Kubernetes cluster locally for this demo:
-   - [Docker for Desktop](https://www.docker.com/products/docker-desktop).
+You'll need a working docker and docker-compose setup. On a Mac or PC, we recommend [Docker for Desktop](https://www.docker.com/products/docker-desktop). On linux, we recommend your distribution's docker package.
 
-## Local Installation
-**Time to install**: About 20 minutes
+## Installation
 
-You will build and deploy microservices images to a single-node Kubernetes cluster running on your development machine.
+**Time to install**: 20 minutes or so
 
-Use one of the following for you cluster:
-- Docker for Desktop (recommended for Mac/Windows)
-- Docker
+Installation is simple - from the root of this repository, simply run `docker-compose up`.
 
-7. In a browser, visit http://localhost:80. You should see the home page where you can shop for donuts and coffee.
-    ![Hipster Shop home page](/docs/img/home-page.png)
+Then, in a browser, visit http://localhost:80. You should see the home page where you can shop for donuts and coffee.
+You can visit http://localhost:3000 to see your telemetry!
 
 ## Cleanup
 
 - If you want to run this demo again, just run `docker-compose down` to clean up.
 - If you want to remove it entirely, then run `docker-compose down --volumes --rmi all` to remove all data volumes and images.
 
-## Conferences Featuring Hipster Shop
+## Roadmap
 
-- [Google Cloud Next'18 London – Keynote](https://youtu.be/nIq2pkNcfEI?t=3071)
-  showing Stackdriver Incident Response Management
-- Google Cloud Next'18 SF
-  - [Day 1 Keynote](https://youtu.be/vJ9OaAqfxo4?t=2416) showing GKE On-Prem
-  - [Day 3 – Keynote](https://youtu.be/JQPOPV_VH5w?t=815) showing Stackdriver
-    APM (Tracing, Code Search, Profiler, Google Cloud Build)
-  - [Introduction to Service Management with Istio](https://www.youtube.com/watch?v=wCJrdKdD6UM&feature=youtu.be&t=586)
-- [KubeCon EU 2019 - Reinventing Networking: A Deep Dive into Istio's Multicluster Gateways - Steve Dake, Independent](https://youtu.be/-t2BfT59zJA?t=982)
+Here's what we're planning to work on next:
 
----
+- [ ] Re-writing services to remove LightStep-specific code, so that we can demonstrate native initialization with the OpenTelemetry SDKs.
+- [ ] Re-writing some services in other languages - we wish to demonstrate every language SDK supported by OpenTelemetry.
+- [ ] Demonstrating technologies other than GRPC
+- [ ] Demonstrating various auto-instrumentation techniques
+- [ ] Adding native logging and metrics support to all examples, as those specifications mature
+- [ ] Pre-configuring Grafana dashboards to monitor the demonstration
+- [ ] Enhanced correlation of metrics signals (traces -> logs, logs -> metrics, etc)
+- [ ] Experimental OpenTelemetry features, such as metrics auto-configuration.
+- [ ] Multiple installation / distribution methods (kubernetes cluster, etc)
+- [ ] Demonstrate how to use the collector to switch out telemetry backends
 
-This is not an official Google project.
-
-
-
-TODO:
-- better installation docs
-- Talk about UIs available
-- Expose ports to localhost for dev work!
-- dozzle
+We'd love your help!

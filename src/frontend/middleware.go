@@ -21,6 +21,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 type ctxKeyLog struct{}
@@ -65,6 +67,15 @@ func (lh *logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		"http.req.method": r.Method,
 		"http.req.id":     requestID.String(),
 	})
+
+	span := trace.SpanFromContext(ctx)
+	if span.IsRecording() {
+		log = log.WithFields(logrus.Fields{
+			"trace_id": span.SpanContext().TraceID().String(),
+			"span_id":  span.SpanContext().SpanID().String(),
+		})
+	}
+
 	if v, ok := r.Context().Value(ctxKeySessionID{}).(string); ok {
 		log = log.WithField("session", v)
 	}

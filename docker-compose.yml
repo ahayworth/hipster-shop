@@ -155,11 +155,9 @@ services:
       EMAIL_SERVICE_ADDR: "emailservice:8080"
       CURRENCY_SERVICE_ADDR: "currencyservice:7000"
       CART_SERVICE_ADDR: "cartservice:7070"
-      LS_SERVICE_NAME: "checkoutservice"
-      OTEL_EXPORTER_OTLP_SPAN_ENDPOINT: "otel-collector:55680"
-      OTEL_EXPORTER_OTLP_SPAN_ENDPOINT_INSECURE: "true"
-      OTEL_EXPORTER_OTLP_METRIC_ENDPOINT: "otel-collector:55680"
-      OTEL_EXPORTER_OTLP_METRIC_ENDPOINT_INSECURE: "true"
+      # TODO: container attrs (or will this get detected?)
+      OTEL_RESOURCE_ATTRIBUTES: "service.name=checkoutservice,service.version=1.0.0,deployment.environment=development"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
       HIPSTER_SICK: "false"
     healthcheck: *grpc-health
     depends_on:
@@ -220,11 +218,9 @@ services:
       SHIPPING_SERVICE_ADDR: "shippingservice:50051"
       CHECKOUT_SERVICE_ADDR: "checkoutservice:5050"
       AD_SERVICE_ADDR: "adservice:9555"
-      LS_SERVICE_NAME: "frontend"
-      OTEL_EXPORTER_OTLP_SPAN_ENDPOINT: "otel-collector:55680"
-      OTEL_EXPORTER_OTLP_SPAN_ENDPOINT_INSECURE: "true"
-      OTEL_EXPORTER_OTLP_METRIC_ENDPOINT: "otel-collector:55680"
-      OTEL_EXPORTER_OTLP_METRIC_ENDPOINT_INSECURE: "true"
+      # TODO: container attrs (or will this get detected?)
+      OTEL_RESOURCE_ATTRIBUTES: "service.name=frontend,service.version=1.0.0,deployment.environment=development"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
     depends_on:
       - otel-collector
 
@@ -262,10 +258,9 @@ services:
     healthcheck: *grpc-health
     environment:
       PORT: "3550"
-      LS_SERVICE_NAME: "productcatalogservice"
-      LS_SERVICE_VERSION: "1.0.0"
-      OTEL_EXPORTER_OTLP_SPAN_ENDPOINT: "otel-collector:55680"
-      OTEL_EXPORTER_OTLP_METRIC_ENDPOINT: "otel-collector:55680"
+      # TODO: container attrs (or will this get detected?)
+      OTEL_RESOURCE_ATTRIBUTES: "service.name=productcatalogservice,service.version=1.0.0,deployment.environment=development"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
     depends_on:
       - otel-collector
 
@@ -303,11 +298,9 @@ services:
     healthcheck: *grpc-health
     environment:
       PORT: "50051"
-      LS_SERVICE_NAME: "shippingservice"
-      OTEL_EXPORTER_OTLP_SPAN_ENDPOINT: "otel-collector:55680"
-      OTEL_EXPORTER_OTLP_SPAN_ENDPOINT_INSECURE: "true"
-      OTEL_EXPORTER_OTLP_METRIC_ENDPOINT: "otel-collector:55680"
-      OTEL_EXPORTER_OTLP_METRIC_ENDPOINT_INSECURE: "true"
+      # TODO: container attrs (or will this get detected?)
+      OTEL_RESOURCE_ATTRIBUTES: "service.name=shippingservice,service.version=1.0.0,deployment.environment=development"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
     depends_on:
       - otel-collector
 

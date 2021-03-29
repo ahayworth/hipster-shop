@@ -33,7 +33,6 @@ import (
 	pb "github.com/GoogleCloudPlatform/microservices-demo/src/productcatalogservice/genproto"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
-	"github.com/lightstep/otel-launcher-go/launcher"
 	"github.com/sirupsen/logrus"
 	grpcotel "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
@@ -71,6 +70,7 @@ var (
 
 func init() {
 	log = logrus.New()
+
 	log.Formatter = &logrus.JSONFormatter{
 		FieldMap: logrus.FieldMap{
 			logrus.FieldKeyTime:  "timestamp",
@@ -88,8 +88,14 @@ func init() {
 }
 
 func main() {
-	otel := initLightstepTracing(log)
-	defer otel.Shutdown()
+	cleanup, err := initTelemetry()
+	if err != nil {
+		log.Errorf("Unable to start telemetry: %s", err)
+	}
+	if cleanup != nil {
+		defer cleanup()
+	}
+
 	flag.Parse()
 
 	// set injected latency
@@ -144,19 +150,6 @@ func run(port string) string {
 	go srv.Serve(l)
 
 	return l.Addr().String()
-}
-
-func initLightstepTracing(log logrus.FieldLogger) launcher.Launcher {
-	launcher := launcher.ConfigureOpentelemetry(
-		launcher.WithLogLevel("debug"),
-		launcher.WithSpanExporterEndpoint(os.Getenv("OTEL_EXPORTER_OTLP_SPAN_ENDPOINT")),
-		launcher.WithSpanExporterInsecure(true),
-		launcher.WithMetricExporterEndpoint(os.Getenv("OTEL_EXPORTER_OTLP_METRIC_ENDPOINT")),
-		launcher.WithMetricExporterInsecure(true),
-		launcher.WithLogger(log),
-	)
-	log.Info("Initialized Lightstep OpenTelemetry launcher")
-	return launcher
 }
 
 type productCatalog struct{}
