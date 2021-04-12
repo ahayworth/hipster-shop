@@ -19,19 +19,13 @@ Our goal is to provide a sample microservice in each official OpenTelemetry lang
 
 This application is based on the excellent work done by Google in their [microservices-demo](https://github.com/GoogleCloudPlatform/microservices-demo) and LightStep in their [hipster-shop](https://github.com/lightstep/hipster-shop) - we're grateful for their work, and hope to collaborate on demo applications in the future.
 
-If you’re using this demo, please **★Star** this repository to show your interest!
+![demo](https://user-images.githubusercontent.com/1781907/114475187-64f78780-9bbd-11eb-9df1-1bd1a753f924.gif)
 
-| Home Page                                                                                                         | Checkout Page                                                                                                    |
-| ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| [![Screenshot of store homepage](/docs/img/home-page.png)](./docs/img/hipster-shop-frontend-1.png) | [![Screenshot of checkout screen](./docs/img/checkout-page.png)](./docs/img/hipster-shop-frontend-2.png) |
 
 ## Service Architecture
 
 **Hipster Shop** is composed of many microservices written in different
 languages that talk to each other over gRPC.
-
-[![Architecture of
-microservices](./docs/img/architecture-diagram.png)](./docs/img/architecture-diagram.png)
 
 Find **Protocol Buffers Descriptions** at the [`./pb` directory](./pb).
 
