@@ -83,8 +83,10 @@ class OpenTelemetryInterceptor < GRPC::ServerInterceptor
       'rpc.method'  => method_name.to_s,
     }
 
-    @tracer.in_span("#{service_name}/#{method_name}", kind: :server, attributes: span_attrs, with_parent: parent_context) do |span|
-      yield(request, call)
+    ::OpenTelemetry::Context.with_current(parent_context) do
+      @tracer.in_span("#{service_name}/#{method_name}", kind: :server, attributes: span_attrs) do |span|
+        yield(request, call)
+      end
     end
   end
 end
