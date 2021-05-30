@@ -36,7 +36,6 @@ services:
       - "9090"
     volumes:
       - ./configs/otel-collector.yaml:/config.yaml
-      - /var/run/docker.sock:/var/run/docker.sock
     command: --config /config.yaml
     environment:
       REDIS_ADDR: "redis:6379"
