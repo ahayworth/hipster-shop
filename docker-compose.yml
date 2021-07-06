@@ -17,7 +17,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib
+    image: otel/opentelemetry-collector-contrib:0.29.0
     ports:
       # OTLP port (modern)
       - "4317:4317"
@@ -47,7 +47,7 @@ services:
       - prometheus
 
   tempo:
-    image: grafana/tempo:latest
+    image: grafana/tempo:1.0.1
     ports:
       - "3100"
       - "55680"
@@ -57,7 +57,7 @@ services:
     command: -config.file=/config.yaml
 
   tempo-query:
-    image: grafana/tempo-query:latest
+    image: grafana/tempo-query:29c6e25f
     depends_on:
       - tempo
     ports:
@@ -68,7 +68,7 @@ services:
     command: --grpc-storage-plugin.configuration-file=/config.yaml
 
   loki:
-    image: grafana/loki:latest
+    image: grafana/loki:2.2.1
     ports:
       - "3100"
     volumes:
@@ -84,7 +84,7 @@ services:
       - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:8.0.4
     ports:
       # TODO: document security implications in the README
       # (not a big deal I just like to be clear when stuff like this is default)
@@ -99,7 +99,6 @@ services:
       GF_AUTH_DISABLE_LOGIN_FORM: "true"
     depends_on:
       - tempo
-      - tempo-query
       - loki
       - prometheus
 

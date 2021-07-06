@@ -19,7 +19,6 @@ receivers:
     endpoint: 0.0.0.0:24224
   redis:
     endpoint: "${REDIS_ADDR}"
-    service_name: "cartservice"
     collection_interval: 10s
 
 # TODO: tag all events to make it clear it's localdev
