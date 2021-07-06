@@ -11,6 +11,7 @@ distributor:
   # @tobert - thinking it makes sense to turn on all the things here too
   # so the internals of the stack can write directly to Tempo and not get
   # egressed to an external observability stack, that seems cool
+  log_received_traces: true
   receivers:
     # gets used by the Jaeger UI so it's handy to have it on here
     jaeger:
