@@ -92,6 +92,7 @@ func (fe *frontendServer) homeHandler(w http.ResponseWriter, r *http.Request) {
 	if err := templates.ExecuteTemplate(w, "home", map[string]interface{}{
 		"session_id":    sessionID(r),
 		"request_id":    r.Context().Value(ctxKeyRequestID{}),
+		"trace_id":      span.SpanContext().TraceID().String(),
 		"user_currency": currentCurrency(r),
 		"currencies":    currencies,
 		"products":      ps,
@@ -170,6 +171,7 @@ func (fe *frontendServer) productHandler(w http.ResponseWriter, r *http.Request)
 	if err := templates.ExecuteTemplate(w, "product", map[string]interface{}{
 		"session_id":      sessionID(r),
 		"request_id":      r.Context().Value(ctxKeyRequestID{}),
+		"trace_id":        span.SpanContext().TraceID().String(),
 		"ad":              fe.chooseAd(r.Context(), p.Categories, log),
 		"user_currency":   currentCurrency(r),
 		"currencies":      currencies,
@@ -308,6 +310,7 @@ func (fe *frontendServer) viewCartHandler(w http.ResponseWriter, r *http.Request
 	if err := templates.ExecuteTemplate(w, "cart", map[string]interface{}{
 		"session_id":       sessionID(r),
 		"request_id":       r.Context().Value(ctxKeyRequestID{}),
+		"trace_id":         span.SpanContext().TraceID().String(),
 		"user_currency":    currentCurrency(r),
 		"currencies":       currencies,
 		"recommendations":  recommendations,
@@ -381,6 +384,7 @@ func (fe *frontendServer) placeOrderHandler(w http.ResponseWriter, r *http.Reque
 	if err := templates.ExecuteTemplate(w, "order", map[string]interface{}{
 		"session_id":      sessionID(r),
 		"request_id":      r.Context().Value(ctxKeyRequestID{}),
+		"trace_id":        span.SpanContext().TraceID().String(),
 		"user_currency":   currentCurrency(r),
 		"order":           order.GetOrder(),
 		"total_paid":      &totalPaid,
@@ -452,11 +456,13 @@ func (fe *frontendServer) chooseAd(ctx context.Context, ctxKeys []string, log lo
 func renderHTTPError(log logrus.FieldLogger, r *http.Request, w http.ResponseWriter, err error, code int) {
 	log.WithField("error", err).Error("request error")
 	errMsg := fmt.Sprintf("%+v", err)
+	span := trace.SpanFromContext(r.Context())
 
 	w.WriteHeader(code)
 	templates.ExecuteTemplate(w, "error", map[string]interface{}{
 		"session_id":  sessionID(r),
 		"request_id":  r.Context().Value(ctxKeyRequestID{}),
+		"trace_id":    span.SpanContext().TraceID().String(),
 		"error":       errMsg,
 		"status_code": code,
 		"status":      http.StatusText(code)})
