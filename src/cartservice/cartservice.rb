@@ -40,64 +40,21 @@ class CartServer < Hipstershop::CartService::Service
   end
 end
 
-class HeaderWrapper
-  def initialize(metadata)
-    @metadata = metadata
-  end
-
-  def [](key)
-    @metadata[key.downcase]
-  end
-
-  def keys
-    @metadata.keys
-  end
-end
-
-class OpenTelemetryInterceptor < GRPC::ServerInterceptor
-  def initialize
-    OpenTelemetry::SDK.configure do |c|
-      c.add_span_processor(
-        OpenTelemetry::SDK::Trace::Export::BatchSpanProcessor.new(
-          OpenTelemetry::Exporter::OTLP::Exporter.new(
-            endpoint: ENV['OTEL_EXPORTER_OTLP_TRACES_ENDPOINT'],
-          )
-        )
-      )
-      c.use_all
-      c.service_name = ENV['LS_SERVICE_NAME']
-    end
-
-    @tracer = OpenTelemetry.tracer_provider.tracer
-  end
-
-  def request_response(request: nil, call: nil, method: nil)
-    service_name = call.service_name
-    method_name  = method.name
-
-    parent_context = ::OpenTelemetry.propagation.extract(HeaderWrapper.new(call.metadata))
-
-    span_attrs = {
-      'rpc.system'  => 'grpc',
-      'rpc.service' => service_name.to_s,
-      'rpc.method'  => method_name.to_s,
-    }
-
-    ::OpenTelemetry::Context.with_current(parent_context) do
-      @tracer.in_span("#{service_name}/#{method_name}", kind: :server, attributes: span_attrs) do |span|
-        yield(request, call)
-      end
-    end
-  end
-end
-
 STDOUT.sync = true
-Griffin::Server.configure do |c|
-  c.bind ENV['LISTEN_ADDR']
-  c.port ENV['PORT']
-  c.services CartServer.new
-  c.interceptors [OpenTelemetryInterceptor.new]
-  c.workers 4
+
+OpenTelemetry::SDK.configure do |c|
+  c.add_span_processor(
+    OpenTelemetry::SDK::Trace::Export::BatchSpanProcessor.new(
+      OpenTelemetry::Exporter::OTLP::Exporter.new(
+        endpoint: ENV['OTEL_EXPORTER_OTLP_TRACES_ENDPOINT'],
+      )
+    )
+  )
+  c.use_all
+  c.service_name = ENV['LS_SERVICE_NAME']
 end
 
-Griffin::Server.run
+server = GRPC::RpcServer.new
+server.add_http2_port("#{ENV['LISTEN_ADDR']}:#{ENV['PORT']}", :this_port_is_insecure)
+server.handle(CartServer.new)
+server.run_till_terminated_or_interrupted([1, 'int', 'SIGQUIT'])

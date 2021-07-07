@@ -1,60 +1,54 @@
+GIT
+  remote: https://github.com/ahayworth/opentelemetry-ruby.git
+  revision: 72c2b8fed78cce714e128d1e73e05863e7d05889
+  branch: ahayworth-add-grpc-instrumentation
+  glob: instrumentation/grpc/*.gemspec
+  specs:
+    opentelemetry-instrumentation-grpc (0.1.0)
+      opentelemetry-api (~> 1.0.0.rc2)
+      opentelemetry-instrumentation-base (~> 0.18.1)
+
 GEM
   remote: https://rubygems.org/
   specs:
-    ds9 (1.4.2)
-      mini_portile2 (>= 2.2.0)
     google-protobuf (3.17.1)
     googleapis-common-protos-types (1.0.6)
       google-protobuf (~> 3.14)
-    griffin (0.3.0)
-      grpc_kit (>= 0.5.0)
-      serverengine (~> 2.0.7)
-    grpc_kit (0.5.1)
-      ds9 (>= 1.4.0)
-      google-protobuf (>= 3.7.0)
-      googleapis-common-protos-types (>= 1.0.2)
-    mini_portile2 (2.5.2)
-      net-ftp (~> 0.1)
-    net-ftp (0.1.2)
-      net-protocol
-      time
-    net-protocol (0.1.0)
-    opentelemetry-api (1.0.0.rc1)
-    opentelemetry-common (0.18.0)
-      opentelemetry-api (~> 1.0.0.rc1)
-    opentelemetry-exporter-otlp (0.18.0)
+    grpc (1.38.0)
+      google-protobuf (~> 3.15)
+      googleapis-common-protos-types (~> 1.0)
+    opentelemetry-api (1.0.0.rc2)
+    opentelemetry-common (0.19.0)
+      opentelemetry-api (~> 1.0.0.rc2)
+    opentelemetry-exporter-otlp (0.20.1)
       google-protobuf (~> 3.7)
-      opentelemetry-api (~> 1.0.0.rc1)
-      opentelemetry-common (~> 0.18.0)
-      opentelemetry-sdk (~> 1.0.0.rc1)
-    opentelemetry-instrumentation-base (0.18.0)
-      opentelemetry-api (~> 1.0.0.rc1)
-    opentelemetry-instrumentation-redis (0.18.0)
-      opentelemetry-api (~> 1.0.0.rc1)
-      opentelemetry-common (~> 0.18.0)
-      opentelemetry-instrumentation-base (~> 0.18.0)
-    opentelemetry-propagator-b3 (0.18.0)
-      opentelemetry-api (~> 1.0.0.rc1)
-    opentelemetry-sdk (1.0.0.rc1)
-      opentelemetry-api (~> 1.0.0.rc1)
-      opentelemetry-common (~> 0.18.0)
-      opentelemetry-instrumentation-base (~> 0.18.0)
+      opentelemetry-api (~> 1.0.0.rc2)
+      opentelemetry-common (~> 0.19.0)
+      opentelemetry-sdk (~> 1.0.0.rc2)
+    opentelemetry-instrumentation-base (0.18.1)
+      opentelemetry-api (~> 1.0.0.rc2)
+    opentelemetry-instrumentation-redis (0.20.0)
+      opentelemetry-api (~> 1.0.0.rc2)
+      opentelemetry-common (~> 0.19.0)
+      opentelemetry-instrumentation-base (~> 0.18.1)
+    opentelemetry-propagator-b3 (0.19.0)
+      opentelemetry-api (~> 1.0.0.rc2)
+    opentelemetry-sdk (1.0.0.rc2)
+      opentelemetry-api (~> 1.0.0.rc2)
+      opentelemetry-common (~> 0.19.0)
+      opentelemetry-instrumentation-base (~> 0.18.1)
     redis (4.2.5)
-    serverengine (2.0.7)
-      sigdump (~> 0.2.2)
-    sigdump (0.2.4)
-    time (0.1.0)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
-  griffin
-  grpc_kit
-  opentelemetry-exporter-otlp (~> 0.18.0)
-  opentelemetry-instrumentation-redis (~> 0.18.0)
-  opentelemetry-propagator-b3 (~> 0.18.0)
-  opentelemetry-sdk (~> 1.0.0.rc1)
+  grpc
+  opentelemetry-exporter-otlp (~> 0.20.1)
+  opentelemetry-instrumentation-grpc!
+  opentelemetry-instrumentation-redis (~> 0.20.0)
+  opentelemetry-propagator-b3 (~> 0.19.0)
+  opentelemetry-sdk (~> 1.0.0.rc2)
   redis
 
 BUNDLED WITH
